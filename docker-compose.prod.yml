@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+  pho-agent:
+    image: registry.crbgroup.cloud/pho-agent:latest
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MCP_SERVER_URL=${MCP_SERVER_URL:-https://pho-mcp-server.crbgroup.live/mcp}
+      - REDIS_URL=${REDIS_URL:-redis://localhost:6379}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - MAX_QUERIES_PER_SESSION=${MAX_QUERIES_PER_SESSION:-30}
+    ports:
+      - 3000:3000
+    networks:
+      my_custom_network:
+        ipv4_address: ${APP_IP}
+        
+networks:
+  my_custom_network:
+    external: true
