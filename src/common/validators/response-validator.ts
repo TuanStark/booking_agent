@@ -40,7 +40,7 @@ export class ResponseValidator {
       {
         pattern: /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi,
         type: 'uuid',
-        message: 'Response contains property IDs'
+        message: 'Response contains room IDs'
       }
     ];
 
@@ -73,9 +73,8 @@ export class ResponseValidator {
     // Check for property listing format
     const listingPatterns = [
       /cho thuê.*tại.*giá/gi,
-      /bán.*tại.*giá/gi,
-      /căn hộ.*tại.*\d+/gi,
-      /nhà.*tại.*\d+/gi
+      /phòng.*tại.*\d+/gi,
+      /giường.*tại.*\d+/gi
     ];
 
     for (const pattern of listingPatterns) {
@@ -89,11 +88,11 @@ export class ResponseValidator {
     if (results && results.length > 0) {
       // Check if response contains data that should only be in results
       const firstResult = results[0];
-      
+
       if (firstResult.address && response.includes(firstResult.address)) {
         errors.push('Response contains exact address from results');
       }
-      
+
       if (firstResult.title && response.includes(firstResult.title)) {
         errors.push('Response contains exact title from results');
       }
@@ -130,13 +129,13 @@ export class ResponseValidator {
 
     // Remove specific prices
     cleaned = cleaned.replace(/\d+\s*(triệu|tỷ|million|billion)/gi, 'X triệu');
-    
+
     // Remove specific areas
     cleaned = cleaned.replace(/\d+\s*(m²|m2|mét vuông)/gi, 'X m²');
-    
+
     // Remove numbered lists (convert to general statements)
     cleaned = cleaned.replace(/\d+\.\s*/g, '');
-    
+
     // Remove UUIDs
     cleaned = cleaned.replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, '[ID]');
 
@@ -148,15 +147,15 @@ export class ResponseValidator {
    */
   static generateCleanResponse(resultsCount: number, query: string): string {
     if (resultsCount === 0) {
-      return `Hiện tại tôi chưa tìm thấy bất động sản phù hợp với yêu cầu "${query}". Bạn có thể thử điều chỉnh tiêu chí tìm kiếm hoặc mở rộng khu vực để có thêm lựa chọn.`;
+      return `Hiện tại tôi chưa tìm thấy phòng KTX nào phù hợp với yêu cầu "${query}". Bạn có thể thử điều chỉnh tiêu chí tìm kiếm hoặc đổi khu vực để có thêm lựa chọn.`;
     }
 
     const responses = [
-      `Tôi đã tìm được ${resultsCount > 5 ? 'nhiều' : 'một số'} bất động sản phù hợp với yêu cầu của bạn. Các lựa chọn này có mức giá và diện tích đa dạng, phù hợp cho nhiều mục đích khác nhau. Hãy xem chi tiết và cho tôi biết nếu bạn cần tìm kiếm thêm theo tiêu chí cụ thể!`,
-      
-      `Dựa trên yêu cầu của bạn, tôi đã tìm thấy ${resultsCount} lựa chọn bất động sản tại khu vực này. Các bất động sản có đặc điểm và mức giá khác nhau, bạn có thể xem chi tiết để chọn lựa phù hợp nhất.`,
-      
-      `Hiện tại có ${resultsCount} bất động sản phù hợp với tiêu chí tìm kiếm của bạn. Tôi khuyên bạn nên xem xét kỹ từng lựa chọn và liên hệ trực tiếp với chủ nhà để có thông tin chính xác nhất.`
+      `Mình đã tìm được ${resultsCount > 5 ? 'nhiều' : 'một số'} phòng KTX phù hợp với yêu cầu của bạn. Các phòng có mức giá và tiện ích đa dạng, phù hợp cho sinh viên. Bạn hãy xem chi tiết bên dưới nhé!`,
+
+      `Dựa trên yêu cầu của bạn, mình đã tìm thấy ${resultsCount} lựa chọn phòng/giường trống. Các phòng có đặc điểm và mức giá khác nhau, bạn có thể xem chi tiết để lựa chọn phù hợp nhất.`,
+
+      `Hiện tại có ${resultsCount} kết quả phòng KTX phù hợp với tiêu chí của bạn. Mình khuyên bạn nên xem xét kỹ tiện ích từng phòng nhé.`
     ];
 
     // Return random response to avoid repetition

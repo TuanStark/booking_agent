@@ -4,11 +4,11 @@ import { KnowledgeBaseLoader } from '../../../knowledge/knowledge-base-loader';
 import { QueryComplexityAnalyzer } from '../../../knowledge/query-complexity-analyzer';
 
 /**
- * Real Estate OpenAI Service - Following Express.js logic
+ * Dormitory OpenAI Service - Following Express.js logic
  */
 @Injectable()
-export class RealEstateOpenAIService {
-  private readonly logger = new Logger(RealEstateOpenAIService.name);
+export class DormitoryOpenAIService {
+  private readonly logger = new Logger(DormitoryOpenAIService.name);
   private knowledgeLoader: KnowledgeBaseLoader;
   private complexityAnalyzer: QueryComplexityAnalyzer;
   private isKnowledgeLoaded = false;

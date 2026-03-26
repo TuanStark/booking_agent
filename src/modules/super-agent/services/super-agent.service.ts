@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { CacheService } from '../../core/services/cache.service';
 import { McpService } from '../../core/services/mcp.service';
 import { OpenAiService } from '../../core/services/openai.service';
-import { RealEstateOpenAIService } from './real-estate-openai.service';
+import { DormitoryOpenAIService } from './dormitory-openai.service';
 import { QueryResponseDto } from '../../../dto/query.dto';
 import { SystemPromptUtil } from '../../../common/utils/system-prompt.util';
 import { ResponseValidator } from '../../../common/validators/response-validator';
@@ -24,7 +24,7 @@ export class SuperAgentService {
     private readonly cacheService: CacheService,
     private readonly mcpService: McpService,
     private readonly openAiService: OpenAiService,
-    private readonly realEstateOpenAIService: RealEstateOpenAIService,
+    private readonly dormitoryOpenAIService: DormitoryOpenAIService,
     private readonly systemPromptUtil: SystemPromptUtil,
   ) {
     this.initializeSystemPrompt();
@@ -574,8 +574,8 @@ export class SuperAgentService {
    */
   selectAIService(): { name: string; service: any } {
     // Only use OpenAI
-    if (this.realEstateOpenAIService.isAvailable()) {
-      return { name: 'OpenAI', service: this.realEstateOpenAIService };
+    if (this.dormitoryOpenAIService.isAvailable()) {
+      return { name: 'OpenAI', service: this.dormitoryOpenAIService };
     }
 
     return { name: null, service: null };
@@ -587,7 +587,7 @@ export class SuperAgentService {
   getSystemPrompt(query = ''): string {
     try {
       // Get enhanced prompt with conditional knowledge base
-      let enhancedPrompt = this.realEstateOpenAIService.getEnhancedSystemPrompt(this.baseSystemPrompt, query);
+      let enhancedPrompt = this.dormitoryOpenAIService.getEnhancedSystemPrompt(this.baseSystemPrompt, query);
 
       // For now, just return the enhanced prompt without dynamic tools injection
       // TODO: Make getTools() synchronous or cache tools

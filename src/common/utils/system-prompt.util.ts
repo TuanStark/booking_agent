@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PROMPT_TEMPLATE } from '../../config/prompt-template';
-import { BDS_NHA_PHO_PROMPT } from '../../config/bds-nha-pho-prompt';
+import { DORMITORY_PROMPT } from '../../config/dormitory-prompt';
 import { SAVE_INFO_USER_PROMPT } from '../../config/save-info-user-promt';
 import { McpService } from '../../modules/core/services/mcp.service';
 
@@ -8,7 +8,7 @@ import { McpService } from '../../modules/core/services/mcp.service';
 export class SystemPromptUtil {
   private readonly logger = new Logger(SystemPromptUtil.name);
 
-  constructor(private readonly mcpService: McpService) {}
+  constructor(private readonly mcpService: McpService) { }
 
   getSystemPrompt(): string {
     try {
@@ -22,18 +22,18 @@ export class SystemPromptUtil {
 
       let toolsList = availableTools
         ? availableTools
-            .map((tool, index) => `${index + 1}. ${tool.function?.name || 'Unknown'} - ${tool.function?.description || 'No description'}`)
-            .join('\n')
+          .map((tool, index) => `${index + 1}. ${tool.function?.name || 'Unknown'} - ${tool.function?.description || 'No description'}`)
+          .join('\n')
         : 'Đang tải tools từ MCP server...';
 
       // Ghép nối prompt chính với prompt BĐS Nhà Phố
       const fullPrompt = promptTemplate
         .replace('{{toolCount}}', toolCount.toString())
-        .replace('{{toolsList}}', toolsList) + BDS_NHA_PHO_PROMPT + SAVE_INFO_USER_PROMPT;
+        .replace('{{toolsList}}', toolsList) + DORMITORY_PROMPT + SAVE_INFO_USER_PROMPT;
 
-      this.logger.log('System prompt assembled with BDS Nha Pho information', {
+      this.logger.log('System prompt assembled with Dormitory information', {
         mainPromptLength: promptTemplate.length,
-        bdsPromptLength: BDS_NHA_PHO_PROMPT.length,
+        bdsPromptLength: DORMITORY_PROMPT.length,
         saveInfoPromptLength: SAVE_INFO_USER_PROMPT.length,
         totalLength: fullPrompt.length,
         toolCount

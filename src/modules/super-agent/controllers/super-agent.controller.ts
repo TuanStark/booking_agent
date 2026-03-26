@@ -19,7 +19,7 @@ import {
 import { Request } from 'express';
 
 import { SuperAgentService } from '../services/super-agent.service';
-import { RealEstateOpenAIService } from '../services/real-estate-openai.service';
+import { DormitoryOpenAIService } from '../services/dormitory-openai.service';
 import {
   QueryRequestDto,
   QueryResponseDto,
@@ -34,8 +34,8 @@ export class SuperAgentController {
 
   constructor(
     private readonly superAgentService: SuperAgentService,
-    private readonly realEstateOpenAIService: RealEstateOpenAIService,
-  ) {}
+    private readonly dormitoryOpenAIService: DormitoryOpenAIService,
+  ) { }
 
   @Post('query')
   @ApiOperation({
@@ -100,11 +100,11 @@ export class SuperAgentController {
   async getStatus(): Promise<any> {
     try {
       this.logger.log('Status check requested');
-      
+
       return {
         success: true,
         agent: {
-          name: 'Super Intelligent Real Estate Agent',
+          name: 'Super Intelligent Dormitory Agent',
           version: '2.0.0',
           intelligenceLevel: 'SUPER_ADVANCED',
           status: 'online'
@@ -115,7 +115,7 @@ export class SuperAgentController {
             model: 'gpt-4o'
           },
           mcp: this.superAgentService.getMcpToolsInfo(),
-          knowledgeBase: this.realEstateOpenAIService.getKnowledgeStatus()
+          knowledgeBase: this.dormitoryOpenAIService.getKnowledgeStatus()
         },
         system: {
           uptime: process.uptime(),
@@ -145,7 +145,7 @@ export class SuperAgentController {
       success: true,
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      agent: 'Super Intelligent Real Estate Agent',
+      agent: 'Super Intelligent Dormitory Agent',
       version: '2.0.0'
     };
   }
@@ -158,9 +158,9 @@ export class SuperAgentController {
   async getMcpTools(): Promise<any> {
     try {
       this.logger.log('MCP tools requested');
-      
+
       const mcpInfo = this.superAgentService.getMcpToolsInfo();
-      
+
       return {
         success: true,
         data: mcpInfo
