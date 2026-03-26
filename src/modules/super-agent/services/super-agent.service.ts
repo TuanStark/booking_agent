@@ -20,6 +20,122 @@ export class SuperAgentService {
   private readonly MAX_RETRY_ATTEMPTS = 3;
   private readonly RETRY_DELAY_BASE = 1000; // 1 second base delay
 
+  private isNearbyQuery(query: string): boolean {
+    return /\b(gần|gan|near|lân cận)\b/i.test(query || '');
+  }
+
+  private extractPlaceQuery(query: string): string {
+    if (!query) return '';
+    // Remove generic prefixes so place text is cleaner for geocoding
+    let normalized = query
+      .replace(/^(\s)*(tìm|tim|cho tôi tìm|hãy tìm)\s+/i, '')
+      .replace(/\bk(ý|i)\s*t(ú|u)c\s*x(á|a)\b/gi, '')
+      .replace(/\bgần\b/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+
+    if (!normalized) normalized = query.trim();
+    return normalized;
+  }
+
+  private extractItemsFromMcpPayload(payload: any): any[] {
+    let actualData = payload;
+
+    // Handle MCP content text JSON envelope
+    if (actualData?.content && Array.isArray(actualData.content) && actualData.content[0]?.text) {
+      try {
+        actualData = JSON.parse(actualData.content[0].text);
+      } catch {
+        // keep original payload if parsing fails
+      }
+    }
+
+    if (Array.isArray(actualData?.properties)) return actualData.properties;
+    if (Array.isArray(actualData?.propertiesView)) return actualData.propertiesView;
+    if (Array.isArray(actualData?.propertyViews)) return actualData.propertyViews.map((pv: any) => pv.property || pv);
+    if (Array.isArray(actualData?.data)) return actualData.data;
+    if (Array.isArray(actualData?.data?.data)) return actualData.data.data;
+    if (Array.isArray(actualData?.buildings)) return actualData.buildings;
+    if (Array.isArray(actualData?.data?.buildings)) return actualData.data.buildings;
+    if (actualData?.roomsByBuilding && typeof actualData.roomsByBuilding === 'object') {
+      return Object.values(actualData.roomsByBuilding).flat() as any[];
+    }
+    if (actualData?.data?.roomsByBuilding && typeof actualData.data.roomsByBuilding === 'object') {
+      return Object.values(actualData.data.roomsByBuilding).flat() as any[];
+    }
+
+    return [];
+  }
+
+  private tokenizeKeyword(text: string): string[] {
+    return (text || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((token) => token.length > 1);
+  }
+
+  private computeKeywordScore(query: string, item: any): number {
+    const keywords = this.tokenizeKeyword(query);
+    if (keywords.length === 0) return 0;
+
+    const searchableText = [
+      item?.name,
+      item?.buildingName,
+      item?.address,
+      item?.description,
+      item?.building?.name,
+      item?.building?.address,
+      item?.building?.description,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    let score = 0;
+    for (const keyword of keywords) {
+      if (searchableText.includes(keyword)) score += 1;
+    }
+    return score / keywords.length;
+  }
+
+  private getDistanceKm(item: any): number | null {
+    const candidates = [item?.distanceKm, item?.distance_km, item?.distance];
+    for (const value of candidates) {
+      const n = Number(value);
+      if (Number.isFinite(n) && n >= 0) return n;
+    }
+    return null;
+  }
+
+  private rerankResults(query: string, items: any[]): any[] {
+    if (!Array.isArray(items) || items.length <= 1) return items || [];
+
+    const reranked = items.map((item) => {
+      const keywordScore = this.computeKeywordScore(query, item); // 0..1
+      const distanceKm = this.getDistanceKm(item);
+      const distanceScore = distanceKm === null ? 0 : 1 / (1 + distanceKm); // closer => higher
+
+      // Weight keyword relevance higher, distance as tie-breaker booster
+      const totalScore = keywordScore * 0.7 + distanceScore * 0.3;
+      return {
+        ...item,
+        _ranking: {
+          keywordScore: Number(keywordScore.toFixed(4)),
+          distanceScore: Number(distanceScore.toFixed(4)),
+          totalScore: Number(totalScore.toFixed(4)),
+        },
+      };
+    });
+
+    reranked.sort((a, b) => b._ranking.totalScore - a._ranking.totalScore);
+    return reranked;
+  }
+
   constructor(
     private readonly cacheService: CacheService,
     private readonly mcpService: McpService,
@@ -225,6 +341,39 @@ export class SuperAgentService {
       let assistantMessage;
       let searchResults = [];
       let aiResponse = null;
+      let prefetchedNearbyTool = false;
+
+      // Heuristic prefetch for proximity intent to improve tool selection quality.
+      if (this.isNearbyQuery(query)) {
+        try {
+          const placeQuery = this.extractPlaceQuery(query);
+          if (placeQuery) {
+            const nearbyResponse = await this.mcpService.callTool('find_nearby_dormitories_by_place', {
+              place_query: placeQuery,
+              radius_km: 6,
+              include_rooms: true,
+              limit: 15,
+            });
+
+            if (nearbyResponse.success) {
+              const nearbyItems = this.extractItemsFromMcpPayload(nearbyResponse.data);
+              if (nearbyItems.length > 0) {
+                searchResults = nearbyItems;
+                prefetchedNearbyTool = true;
+                messages.push({
+                  role: 'system',
+                  content: `Nearby dormitory prefetch for place "${placeQuery}": ${JSON.stringify(nearbyResponse.data)}`,
+                });
+              }
+            }
+          }
+        } catch (error) {
+          this.logger.warn('Nearby prefetch failed, continue normal flow', {
+            error: error?.message,
+            query: query.substring(0, 120),
+          });
+        }
+      }
 
       try {
         const tools = await this.getTools();
@@ -282,7 +431,7 @@ export class SuperAgentService {
           toolCallsNames: assistantMessage.tool_calls.map(tc => tc.function?.name)
         });
 
-        const toolResults = await this.processToolCalls(assistantMessage.tool_calls);
+        const toolResults = await this.processToolCalls(assistantMessage.tool_calls, query);
 
         // Add assistant message with tool_calls to conversation
         messages.push(assistantMessage);
@@ -314,7 +463,7 @@ export class SuperAgentService {
         }
 
         // Extract search results if available
-        if (toolResults.searchResults) {
+        if (toolResults.searchResults && toolResults.searchResults.length > 0) {
           searchResults = toolResults.searchResults;
         }
 
@@ -365,7 +514,13 @@ export class SuperAgentService {
       await this.incrementSessionQueryCount(currentSessionId);
 
       const duration = Date.now() - startTime;
-      const toolsUsed = assistantMessage.tool_calls?.map(tc => tc.function.name) || [];
+      const toolsUsedFromCalls = assistantMessage.tool_calls?.map(tc => tc.function.name) || [];
+      const toolsUsed = prefetchedNearbyTool
+        ? Array.from(new Set(['find_nearby_dormitories_by_place', ...toolsUsedFromCalls]))
+        : toolsUsedFromCalls;
+
+      // Re-rank and keep only top 3 best results.
+      searchResults = this.rerankResults(query, searchResults).slice(0, 3);
 
       // Validate response to prevent duplicate information
       const validation = ResponseValidator.validateResponse(finalResponse, searchResults);
@@ -434,7 +589,7 @@ export class SuperAgentService {
   /**
    * Process tool calls
    */
-  async processToolCalls(toolCalls: any[]): Promise<any> {
+  async processToolCalls(toolCalls: any[], originalQuery?: string): Promise<any> {
     const results: any = {};
     const toolResponses: any = {}; // Store tool responses for OpenAI
     let searchResults: any[] = [];
@@ -466,43 +621,41 @@ export class SuperAgentService {
           results[id] = mcpResponse.data || {};
           toolResponses[id] = mcpResponse.data || {};
 
-          // Extract search results - handle complex MCP response structure
-          let properties = null;
-          let actualData = mcpResponse.data;
+          let extractedItems: any[] = this.extractItemsFromMcpPayload(mcpResponse.data);
 
-          // Handle case where data is in result.content[0].text as JSON string
-          if (actualData?.content && Array.isArray(actualData.content) && actualData.content[0]?.text) {
-            try {
-              const parsedData = JSON.parse(actualData.content[0].text);
-              actualData = parsedData;
-            } catch (parseError) {
-              this.logger.warn('Failed to parse MCP content text as JSON', { error: parseError.message });
+          // Smart fallback: for "near" query, if model picked non-near tool and no items, force nearby tool once.
+          if (
+            extractedItems.length === 0 &&
+            originalQuery &&
+            this.isNearbyQuery(originalQuery) &&
+            func.name !== 'find_nearby_dormitories_by_place'
+          ) {
+            const placeQuery = this.extractPlaceQuery(originalQuery);
+            if (placeQuery) {
+              const nearbyFallback = await this.mcpService.callTool('find_nearby_dormitories_by_place', {
+                place_query: placeQuery,
+                radius_km: 6,
+                include_rooms: true,
+                limit: 15,
+              });
+              if (nearbyFallback.success) {
+                extractedItems = this.extractItemsFromMcpPayload(nearbyFallback.data);
+              }
             }
           }
 
-          // Now extract properties from the actual data
-          if (actualData?.properties && Array.isArray(actualData.properties)) {
-            properties = actualData.properties;
-          } else if (actualData?.propertiesView && Array.isArray(actualData.propertiesView)) {
-            properties = actualData.propertiesView;
-          } else if (actualData?.propertyViews && Array.isArray(actualData.propertyViews)) {
-            // Extract property from propertyViews structure
-            properties = actualData.propertyViews.map(pv => pv.property || pv);
-          }
-
-          if (properties) {
-            // Ensure each property has required fields (id, slug)
-            const validProperties = properties.map(prop => ({
-              ...prop,
-              slug: prop.slug || `property-${prop.id}` // Generate slug if missing
+          if (Array.isArray(extractedItems) && extractedItems.length > 0) {
+            const normalizedItems = extractedItems.map(item => ({
+              ...item,
+              slug: item?.slug || (item?.id ? `item-${item.id}` : undefined)
             }));
 
-            searchResults = [...searchResults, ...validProperties];
+            searchResults = [...searchResults, ...normalizedItems];
             this.logger.log('Found search results', {
               toolName: func.name,
-              propertyCount: validProperties.length,
+              itemCount: normalizedItems.length,
               searchResultsLength: searchResults.length,
-              firstPropertyId: validProperties[0]?.id
+              firstItemId: normalizedItems[0]?.id
             });
           }
         } else {
