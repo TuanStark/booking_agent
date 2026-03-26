@@ -20,7 +20,7 @@ export class SystemPromptUtil {
       const availableTools = this.mcpService.getAvailableMCPTools();
       const toolCount = availableTools ? availableTools.length : 0;
 
-      let toolsList = availableTools
+      const toolsList = availableTools
         ? availableTools
           .map((tool, index) => `${index + 1}. ${tool.function?.name || 'Unknown'} - ${tool.function?.description || 'No description'}`)
           .join('\n')

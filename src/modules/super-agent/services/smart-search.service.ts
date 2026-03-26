@@ -36,8 +36,6 @@ export class SmartSearchService {
    * Tìm kiếm thông minh với nhiều chiến lược
    */
   async smartSearch(query: string): Promise<SmartSearchResult> {
-    const startTime = Date.now();
-    
     this.logger.log('Starting smart search', {
       query: query.substring(0, 100)
     });
@@ -46,7 +44,6 @@ export class SmartSearchService {
     const analysis = this.queryAnalyzer.analyzeQuery(query);
     
     let results: any[] = [];
-    let searchStrategy: 'exact' | 'flexible' | 'fallback' | 'related' = 'exact';
     let searchAttempts = 0;
     const searchPath: string[] = [];
 
@@ -76,7 +73,6 @@ export class SmartSearchService {
     try {
       searchAttempts++;
       searchPath.push('flexible_search');
-      searchStrategy = 'flexible';
       
       this.logger.log('Attempting flexible search', {
         params: analysis.searchStrategy.flexible
@@ -128,7 +124,6 @@ export class SmartSearchService {
     try {
       searchAttempts++;
       searchPath.push('fallback_search');
-      searchStrategy = 'fallback';
       
       this.logger.log('Attempting fallback search', {
         params: analysis.searchStrategy.fallback
@@ -172,7 +167,6 @@ export class SmartSearchService {
     }
 
     if (relatedResults.length > 0) {
-      searchStrategy = 'related';
       results = relatedResults;
       
       this.logger.log('Related search successful', {

@@ -254,7 +254,7 @@ interface ExtendedLogger extends winston.Logger {
 
 // Start automatic log rotation
 if (config.nodeEnv === 'production') {
-  (async () => {
+  void (async () => {
     const stats = await (logger as ExtendedLogger).getLogStats();
     logger.info('Logger initialized with rotation', {
       logDirectory: logsDir,

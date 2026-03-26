@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
-import { QueryComplexityAnalyzer, ComplexityAnalysis } from '../../../knowledge/query-complexity-analyzer';
+import { QueryComplexityAnalyzer } from '../../../knowledge/query-complexity-analyzer';
 import { KnowledgeBaseLoader } from '../../../knowledge/knowledge-base-loader';
 
 export interface OpenAiStatus {

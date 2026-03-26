@@ -16,7 +16,7 @@ export class DormitoryOpenAIService {
   constructor(private readonly openAiService: OpenAiService) {
     this.knowledgeLoader = new KnowledgeBaseLoader();
     this.complexityAnalyzer = new QueryComplexityAnalyzer();
-    this.initializeKnowledge();
+    void this.initializeKnowledge();
   }
 
   async initializeKnowledge(): Promise<void> {

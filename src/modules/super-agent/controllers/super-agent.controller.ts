@@ -7,7 +7,6 @@ import {
   HttpStatus,
   Logger,
   UseGuards,
-  Req,
 } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import {
@@ -16,7 +15,6 @@ import {
   ApiResponse,
   ApiBody,
 } from '@nestjs/swagger';
-import { Request } from 'express';
 
 import { SuperAgentService } from '../services/super-agent.service';
 import { DormitoryOpenAIService } from '../services/dormitory-openai.service';
@@ -60,7 +58,6 @@ export class SuperAgentController {
   })
   async processQuery(
     @Body() queryDto: QueryRequestDto,
-    @Req() request: Request,
   ): Promise<QueryResponseDto> {
     try {
       this.logger.log('Super Agent query received', {

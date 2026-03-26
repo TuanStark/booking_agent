@@ -158,7 +158,7 @@ export class McpService implements OnModuleInit, OnModuleDestroy {
       if (tools && Array.isArray(tools)) {
         const formattedTools = tools.map(tool => {
           // Validate tool parameters
-          let parameters = tool.parameters;
+          const parameters = tool.parameters;
 
           if (!parameters || (typeof parameters === 'object' && Object.keys(parameters).length === 0)) {
             this.logger.warn('Tool has missing or empty parameters', {

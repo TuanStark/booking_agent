@@ -99,7 +99,7 @@ export class IntelligentQueryAnalyzer {
     });
 
     // Tạo chiến lược tìm kiếm
-    const searchStrategy = this.buildSearchStrategy(primaryParams, alternativeParams, relatedParams);
+    const searchStrategy = this.buildSearchStrategy(primaryParams);
 
     // Tạo gợi ý
     const suggestions = this.buildSuggestions(location, propertyType, priceInfo, areaInfo);
@@ -337,7 +337,7 @@ export class IntelligentQueryAnalyzer {
   /**
    * Xây dựng chiến lược tìm kiếm
    */
-  private buildSearchStrategy(primary: any, alternatives: any[], related: any[]): any {
+  private buildSearchStrategy(primary: any): any {
     return {
       exact: primary,
       flexible: {

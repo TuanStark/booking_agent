@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
 
 import { CacheService } from '../../core/services/cache.service';
 import { McpService } from '../../core/services/mcp.service';
@@ -143,7 +142,7 @@ export class SuperAgentService {
     private readonly dormitoryOpenAIService: DormitoryOpenAIService,
     private readonly systemPromptUtil: SystemPromptUtil,
   ) {
-    this.initializeSystemPrompt();
+    void this.initializeSystemPrompt();
   }
 
   private async initializeSystemPrompt(): Promise<void> {
@@ -740,7 +739,7 @@ export class SuperAgentService {
   getSystemPrompt(query = ''): string {
     try {
       // Get enhanced prompt with conditional knowledge base
-      let enhancedPrompt = this.dormitoryOpenAIService.getEnhancedSystemPrompt(this.baseSystemPrompt, query);
+      const enhancedPrompt = this.dormitoryOpenAIService.getEnhancedSystemPrompt(this.baseSystemPrompt, query);
 
       // For now, just return the enhanced prompt without dynamic tools injection
       // TODO: Make getTools() synchronous or cache tools
