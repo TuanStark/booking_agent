@@ -59,7 +59,7 @@ export interface AppConfig {
 
 const config: AppConfig = {
   // Server Configuration
-  port: parseInt(process.env.PORT || '3000'),
+  port: parseInt(process.env.PORT || '3012', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   
   // API Configuration
@@ -80,7 +80,7 @@ const config: AppConfig = {
   
   // MCP Configuration
   mcp: {
-    serverUrl: process.env.MCP_SERVER_URL || 'http://localhost:8080',
+    serverUrl: process.env.MCP_SERVER_URL || 'http://localhost:3011/mcp',
     apiKey: process.env.MCP_API_KEY || 'f01c5ef6-2237-492f-a1c8-b6a922b13cdb',
     timeout: parseInt(process.env.MCP_TIMEOUT || '30000')
   },

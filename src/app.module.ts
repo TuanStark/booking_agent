@@ -19,7 +19,7 @@ import { CoreModule } from './modules/core/core.module';
         NODE_ENV: Joi.string()
           .valid('development', 'production', 'test')
           .default('development'),
-        PORT: Joi.number().default(3000),
+        PORT: Joi.number().default(3012),
 
         // OpenAI Configuration
         OPENAI_API_KEY: Joi.string().required(),

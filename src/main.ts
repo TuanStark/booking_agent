@@ -81,7 +81,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = configService.get('PORT', 3000);
+  const port = configService.get('PORT', 3012);
   await app.listen(port);
 
   logger.info(`🚀 Real Estate Chatbot Agent (NestJS) is running on: http://localhost:${port}`);
